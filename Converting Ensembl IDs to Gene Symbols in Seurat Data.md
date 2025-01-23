@@ -6,7 +6,7 @@ Learn how to replace Ensembl IDs with Gene Symbols in Seurat objects, ensuring t
 ## Steps
 
 ### 1. Load required libraries
-```
+``` r
 library(Seurat)
 library(clusterProfiler)
 library(org.Hs.eg.db)
