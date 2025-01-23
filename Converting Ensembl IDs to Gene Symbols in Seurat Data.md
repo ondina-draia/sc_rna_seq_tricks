@@ -65,8 +65,48 @@ rownames(human_main@assays$RNA@data) <- matched_symbols
 rownames(human_main@assays$RNA@scale.data) <- matched_symbols
 
 ```
+### Step 5: Update Gene Symbols Across Seurat Data Slots
 
-### Step 5: Validate the Seurat Object
+```
+update_gene_names <- function(seurat_object, gene_mapping) {
+  # Update counts
+  current_ensembl <- rownames(seurat_object@assays$RNA@counts)
+  matched_symbols <- gene_mapping$SYMBOL[match(current_ensembl, gene_mapping$ENSEMBL)]
+  rownames(seurat_object@assays$RNA@counts) <- matched_symbols
+  
+  # Update data
+  current_ensembl <- rownames(seurat_object@assays$RNA@data)
+  matched_symbols <- gene_mapping$SYMBOL[match(current_ensembl, gene_mapping$ENSEMBL)]
+  rownames(seurat_object@assays$RNA@data) <- matched_symbols
+  
+  # Update scale.data
+  current_ensembl <- rownames(seurat_object@assays$RNA@scale.data)
+  matched_symbols <- gene_mapping$SYMBOL[match(current_ensembl, gene_mapping$ENSEMBL)]
+  rownames(seurat_object@assays$RNA@scale.data) <- matched_symbols
+  
+  # Update var.features
+  current_ensembl <- seurat_object@assays$RNA@var.features
+  matched_symbols <- gene_mapping$SYMBOL[match(current_ensembl, gene_mapping$ENSEMBL)]
+  seurat_object@assays$RNA@var.features <- matched_symbols
+  
+  # Check for duplicates or NAs
+  for (slot in c("counts", "data", "scale.data", "var.features")) {
+    duplicate_count <- sum(duplicated(rownames(seurat_object@assays$RNA[[slot]])))
+    print(paste("Duplicates in", slot, ":", duplicate_count))
+    
+    na_count <- sum(is.na(rownames(seurat_object@assays$RNA[[slot]])))
+    print(paste("NA values in", slot, ":", na_count))
+  }
+  
+  return(seurat_object)
+}
+
+# Apply the function
+human_main <- update_gene_names(human_main, human_gene_symbol)
+
+```
+
+### Step 6: Validate the Seurat Object
 
 ```
 # Check for duplicates
