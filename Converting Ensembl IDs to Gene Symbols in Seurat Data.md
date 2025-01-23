@@ -40,10 +40,6 @@ print(paste("Number of NA values:", na_count))
 # Remove duplicates
 human_gene_symbol_no_dup <- human_gene_symbol[!duplicated(human_gene_symbol$SYMBOL), ]
 
-# Replace NA values with original Ensembl IDs
-human_gene_symbol_no_dup$SYMBOL[is.na(human_gene_symbol_no_dup$SYMBOL)] <- 
-  human_gene_symbol_no_dup$ENSEMBL
-
 # Update the mapping table
 human_gene_symbol <- human_gene_symbol_no_dup
 ```
@@ -55,9 +51,6 @@ current_ensembl <- rownames(human_main@assays$RNA@counts)
 
 # Match and replace with Gene Symbols
 matched_symbols <- human_gene_symbol$SYMBOL[match(current_ensembl, human_gene_symbol$ENSEMBL)]
-
-# Replace NAs with original Ensembl IDs
-matched_symbols[is.na(matched_symbols)] <- current_ensembl
 
 # Update rownames
 rownames(human_main@assays$RNA@counts) <- matched_symbols
