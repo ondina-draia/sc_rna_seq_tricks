@@ -62,35 +62,40 @@ rownames(human_main@assays$RNA@scale.data) <- matched_symbols
 
 ```
 update_gene_names <- function(seurat_object, gene_mapping) {
-  # Update counts
-  current_ensembl <- rownames(seurat_object@assays$RNA@counts)
-  matched_symbols <- gene_mapping$SYMBOL[match(current_ensembl, gene_mapping$ENSEMBL)]
-  rownames(seurat_object@assays$RNA@counts) <- matched_symbols
+  # Update counts and data
+  for (slot in c("counts", "data")) {
+    current_ensembl <- rownames(seurat_object@assays$RNA[[slot]])
+    matched_symbols <- gene_mapping$SYMBOL[match(current_ensembl, gene_mapping$ENSEMBL)]
+    
+    # Replace only valid mappings, keep unmatched as original
+    matched_symbols[is.na(matched_symbols)] <- current_ensembl
+    
+    rownames(seurat_object@assays$RNA[[slot]]) <- matched_symbols
+  }
+
+  # Update scale.data (only matching genes)
+  scale_genes <- rownames(seurat_object@assays$RNA@scale.data)
+  matched_scale_symbols <- gene_mapping$SYMBOL[match(scale_genes, gene_mapping$ENSEMBL)]
   
-  # Update data
-  current_ensembl <- rownames(seurat_object@assays$RNA@data)
-  matched_symbols <- gene_mapping$SYMBOL[match(current_ensembl, gene_mapping$ENSEMBL)]
-  rownames(seurat_object@assays$RNA@data) <- matched_symbols
-  
-  # Update scale.data
-  current_ensembl <- rownames(seurat_object@assays$RNA@scale.data)
-  matched_symbols <- gene_mapping$SYMBOL[match(current_ensembl, gene_mapping$ENSEMBL)]
-  rownames(seurat_object@assays$RNA@scale.data) <- matched_symbols
-  
-  # Update var.features
-  current_ensembl <- seurat_object@assays$RNA@var.features
-  matched_symbols <- gene_mapping$SYMBOL[match(current_ensembl, gene_mapping$ENSEMBL)]
-  seurat_object@assays$RNA@var.features <- matched_symbols
-  
+  # Keep original names for unmatched genes
+  matched_scale_symbols[is.na(matched_scale_symbols)] <- scale_genes
+  rownames(seurat_object@assays$RNA@scale.data) <- matched_scale_symbols
+
+  # Update variable features
+  current_var_features <- seurat_object@assays$RNA@var.features
+  matched_var_symbols <- gene_mapping$SYMBOL[match(current_var_features, gene_mapping$ENSEMBL)]
+  matched_var_symbols[is.na(matched_var_symbols)] <- current_var_features
+  seurat_object@assays$RNA@var.features <- matched_var_symbols
+
   # Check for duplicates or NAs
-  for (slot in c("counts", "data", "scale.data", "var.features")) {
+  for (slot in c("counts", "data", "scale.data")) {
     duplicate_count <- sum(duplicated(rownames(seurat_object@assays$RNA[[slot]])))
     print(paste("Duplicates in", slot, ":", duplicate_count))
     
     na_count <- sum(is.na(rownames(seurat_object@assays$RNA[[slot]])))
     print(paste("NA values in", slot, ":", na_count))
   }
-  
+
   return(seurat_object)
 }
 
@@ -102,6 +107,11 @@ human_main <- update_gene_names(human_main, human_gene_symbol)
 ### Step 6: Validate the Seurat Object
 
 ```
+all(rownames(human_main@assays$RNA@counts) == 
+    rownames(human_main@assays$RNA@data)) &&
+all(rownames(human_main@assays$RNA@scale.data) %in% 
+    rownames(human_main@assays$RNA@counts))
+
 # Check for duplicates
 dup_counts <- sum(duplicated(rownames(human_main@assays$RNA@counts)))
 print(paste("Number of duplicate row names:", dup_counts))
@@ -112,7 +122,7 @@ print(paste("Number of NA row names:", na_counts))
 
 ```
 
-### Step 6: Reformat Meta Features
+### Step 7: Reformat Meta Features
 
 ```
 # Sync meta.features with normalized data
@@ -127,7 +137,7 @@ meta.features <- data.frame(
 
 human_main@assays$RNA@meta.features <- meta.features
 ```
-### Step 7: Perform Downstream Analysis
+### Step 8: Perform Downstream Analysis
 
 ```
 human_main <- NormalizeData(human_main)
